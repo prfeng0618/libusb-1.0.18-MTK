@@ -179,6 +179,9 @@ struct linux_transfer_priv {
 	int iso_packet_offset;
 };
 
+//pengruofeng: add function declaration before _get_usbfs_fd function
+static int kernel_version_ge(int major, int minor, int sublevel);
+
 static int _get_usbfs_fd(struct libusb_device *dev, mode_t mode, int silent)
 {
 	struct libusb_context *ctx = DEVICE_CTX(dev);
@@ -192,7 +195,21 @@ static int _get_usbfs_fd(struct libusb_device *dev, mode_t mode, int silent)
 		snprintf(path, PATH_MAX, "%s/%03d/%03d",
 			usbfs_path, dev->bus_number, dev->device_address);
 
+	/*[begin][pengruofeng]: wait for kernel create dev file in usbfs*/
+	if(kernel_version_ge(2,6,26)){
+		sleep(1);
+	} else {
+		usleep(100000);
+	}
+	/*[end]*/
+
+
 	fd = open(path, mode);
+
+	/*[begin][pengruofeng]: printf usbfs  file opened fd*/
+	usbi_dbg("open usbfs file , fd %d\n",fd);	
+	/*[end]*/
+	
 	if (fd != -1)
 		return fd; /* Success */
 
@@ -1011,6 +1028,14 @@ retry:
 	usbi_mutex_lock(&ctx->usb_devs_lock);
 	list_for_each_entry(it, &ctx->usb_devs, list, struct libusb_device) {
 		struct linux_device_priv *priv = _device_priv(it);
+		//[begin]pengruofeng : debug netlink
+		if(!priv->sysfs_dir){
+			usbi_mutex_unlock(&ctx->usb_devs_lock);
+			return LIBUSB_SUCCESS;
+		} else {
+			usbi_dbg("priv->sysfs_dir = %s",priv->sysfs_dir);
+		}
+		//[end]pengruoefng
 		if (0 == strcmp (priv->sysfs_dir, parent_sysfs_dir)) {
 			dev->parent_dev = libusb_ref_device(it);
 			break;

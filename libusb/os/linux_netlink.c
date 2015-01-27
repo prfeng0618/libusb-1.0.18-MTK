@@ -54,6 +54,7 @@
 #endif
 
 #define KERNEL 1
+#define NETLINK_KOBJECT_UEVENT 15
 
 static int linux_netlink_socket = -1;
 static int netlink_control_pipe[2] = { -1, -1 };
@@ -285,6 +286,8 @@ static int linux_netlink_read_message(void)
 
 	r = linux_netlink_parse(buffer, len, &detached, &sys_name,
 				&busnum, &devaddr);
+	//pengruofeng netlink
+	usbi_dbg("parse netlink msg r=%d",r);
 	if (r)
 		return r;
 
